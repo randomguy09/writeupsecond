@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+  ::selection {
+    background: rgba(52, 211, 153, 0.25);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1f2a3d;
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a3850;
+  }
+}
+
+@layer components {
+  .field {
+    @apply w-full rounded-md border border-case-border bg-case-850 px-3 py-2 font-mono text-sm text-slate-200 outline-none transition-colors;
+    @apply focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30;
+  }
+}
+
+/* TipTap code block syntax highlighting (lowlight / highlight.js tokens) */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal {
+  color: #34d399;
+}
+.hljs-string,
+.hljs-attr {
+  color: #fbbf24;
+}
+.hljs-comment {
+  color: #64748b;
+  font-style: italic;
+}
+.hljs-number,
+.hljs-symbol {
+  color: #38bdf8;
+}
+.hljs-title,
+.hljs-section,
+.hljs-name {
+  color: #f472b6;
+}
+.hljs-variable,
+.hljs-template-variable {
+  color: #a78bfa;
+}
+
+.ProseMirror pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #475569;
+  pointer-events: none;
+}
