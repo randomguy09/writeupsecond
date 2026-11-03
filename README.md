@@ -1,73 +1,43 @@
 # 0xWriteups — CTF Case File Portfolio
 
-A dark, "hacker case file" themed CTF write-up portfolio. React + Tailwind + Firebase (Auth + Firestore), with a TipTap-powered WYSIWYG editor (headings, bold/italic, lists, inline images, and syntax-highlighted code blocks).
+A dark, "hacker case file" themed CTF write-up portfolio. React + Tailwind on Netlify, using **Netlify Identity** for accounts and **Netlify Database** (managed Postgres, via Drizzle ORM) for storage, with a TipTap-powered WYSIWYG editor (headings, bold/italic, lists, inline images, and syntax-highlighted code blocks).
 
 ## Setup
 
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
+No API keys or external services are needed.
 
-2. **Create a Firebase project** at https://console.firebase.google.com
-   - Enable **Authentication** → Sign-in methods → turn on *Anonymous* and *Email/Password*.
-   - Enable **Firestore Database** (start in production mode).
-   - In Project Settings → General, create a Web App and copy its config values.
+1. `npm install`
+2. `netlify dev` — runs Vite plus the `/api/writeups` function locally.
 
-3. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Fill in `.env` with your Firebase web app config (`apiKey`, `authDomain`, `projectId`, etc).
+On deploy, Netlify provisions the database and applies the migrations in `netlify/database/migrations/` automatically.
 
-4. **Deploy Firestore security rules** (`firestore.rules` is included) so each user can only read/write their own `users/{uid}/writeups` collection:
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
-   (requires the Firebase CLI and `firebase init` run once against your project)
+### Accounts
 
-5. **Run locally**
-   ```bash
-   npm run dev
-   ```
+Identity is enabled for the site. By default new sign-ups must confirm their email before they can sign in; you can turn on *Autoconfirm* (or switch registration to invite-only) in the Netlify dashboard under **Project configuration → Identity**.
 
 ## Structure
 
 ```
+db/
+  schema.ts            # Drizzle table definition (writeups)
+  index.ts             # Drizzle client (Netlify Database adapter)
+netlify/
+  functions/writeups.mts   # GET / POST / DELETE /api/writeups (per signed-in user)
+  database/migrations/     # generated with `npx drizzle-kit generate --name <change>`
 src/
   lib/
-    firebase.js      # Firebase app/auth/db init
-    useAuth.js        # anonymous + email/password auth hook
-    useWriteups.js     # real-time Firestore listener + save function
-  components/
-    Sidebar.jsx        # nav: Dashboard / New Case File + user status
-    AuthGate.jsx        # sign-in / register / anonymous screen
-    Dashboard.jsx        # grid of write-up cards, search
-    WriteupCard.jsx       # individual card with badges
-    Badges.jsx              # difficulty + category color-coded badges
-    CaseFileEditor.jsx       # metadata form + TipTap editor ("New Case File")
-    EditorToolbar.jsx         # formatting toolbar for the editor
-    Icons.jsx                  # inline SVG icon set
-  App.jsx                       # view routing + Firebase wiring
-  index.css                      # Tailwind layers + editor/code styling
+    useAuth.js         # Netlify Identity login / signup / logout hook
+    useWriteups.js     # fetches + saves write-ups via /api/writeups
+  components/          # Sidebar, AuthGate, Dashboard, WriteupCard, Badges, CaseFileEditor, EditorToolbar, Icons
+  App.jsx              # view routing
+  index.css            # Tailwind layers + editor/code styling
 ```
 
 ## Data model
 
-Each write-up is stored at `users/{uid}/writeups/{docId}`:
+Table `writeups`: `id`, `user_id` (Identity user id), `ctf_name`, `challenge_name`, `category` (Web | Crypto | Pwn | Rev | Forensics | OSINT), `difficulty` (Textbook | Easy | Medium | Hard), `summary`, `content_html`, `content_json` (raw TipTap doc), `created_at`.
 
-```js
-{
-  ctfName: "HackTheBox CyberApocalypse",
-  challengeName: "baby-rop",
-  category: "Pwn",        // Web | Crypto | Pwn | Rev | Forensics | OSINT
-  difficulty: "Medium",    // Textbook | Easy | Medium | Hard
-  summary: "Short one-liner for the card view",
-  contentHTML: "<p>...</p>",  // rendered HTML from the editor
-  contentJSON: { ... },         // raw TipTap JSON doc, for re-editing later
-  createdAt: Timestamp,
-}
-```
+The API only ever returns or modifies rows belonging to the signed-in user.
 
 ## Notes
 

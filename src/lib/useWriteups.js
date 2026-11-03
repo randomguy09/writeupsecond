@@ -1,36 +1,58 @@
-import { useEffect, useState } from "react";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "./firebase";
+import { useCallback, useEffect, useState } from "react";
+
+async function request(method, body) {
+  const res = await fetch("/api/writeups", {
+    method,
+    credentials: "same-origin",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status}).`;
+    try {
+      const data = await res.json();
+      if (data?.error) message = data.error;
+    } catch {
+      /* non-JSON error */
+    }
+    if (res.status === 401) message = "Your session expired. Please sign in again.";
+    throw new Error(message);
+  }
+  return res.status === 204 ? null : res.json();
+}
 
 export function useWriteups(userId) {
   const [writeups, setWriteups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!userId) return;
-    const q = query(
-      collection(db, "users", userId, "writeups"),
-      orderBy("createdAt", "desc")
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      setWriteups(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    setLoading(true);
+    setError("");
+    try {
+      setWriteups(await request("GET"));
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-    });
-    return unsub;
+    }
   }, [userId]);
 
-  const saveWriteup = (userId, data) =>
-    addDoc(collection(db, "users", userId, "writeups"), {
-      ...data,
-      createdAt: serverTimestamp(),
-    });
+  useEffect(() => {
+    if (!userId) {
+      setWriteups([]);
+      setLoading(true);
+      return;
+    }
+    refresh();
+  }, [userId, refresh]);
 
-  return { writeups, loading, saveWriteup };
+  const saveWriteup = async (data) => {
+    const created = await request("POST", data);
+    setWriteups((prev) => [created, ...prev]);
+    return created;
+  };
+
+  return { writeups, loading, error, refresh, saveWriteup };
 }

@@ -6,8 +6,8 @@ export default function Sidebar({ view, setView, user, onLogout }) {
     { key: "editor", label: "New Case File", icon: PlusFileIcon },
   ];
 
-  const uid = user?.uid ? `${user.uid.slice(0, 10)}…` : "—";
-  const identity = user?.isAnonymous ? "anon" : user?.email || "unknown";
+  const uid = user?.id ? `${user.id.slice(0, 10)}…` : "—";
+  const identity = user?.email || user?.name || "unknown";
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-case-border bg-case-900/80 backdrop-blur">

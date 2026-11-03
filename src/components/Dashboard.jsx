@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import WriteupCard from "./WriteupCard";
 import { PlusFileIcon } from "./Icons";
 
-export default function Dashboard({ writeups, loading, onNew, onOpen }) {
+export default function Dashboard({ writeups, loading, error, onRetry, onNew, onOpen }) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -42,7 +42,17 @@ export default function Dashboard({ writeups, loading, onNew, onOpen }) {
       </header>
 
       <main className="px-8 py-8">
-        {loading ? (
+        {error ? (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-rose-500/30 py-24 text-center">
+            <p className="font-mono text-sm text-rose-300">// {error}</p>
+            <button
+              onClick={onRetry}
+              className="mt-4 rounded-md border border-case-border px-4 py-2 font-mono text-sm text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300"
+            >
+              retry
+            </button>
+          </div>
+        ) : loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div

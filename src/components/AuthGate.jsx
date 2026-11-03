@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AuthError, MissingIdentityError } from "@netlify/identity";
 import { TerminalIcon } from "./Icons";
 
 export default function AuthGate({ auth }) {
@@ -6,32 +7,45 @@ export default function AuthGate({ auth }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState(auth.notice || "");
   const [busy, setBusy] = useState(false);
+
+  function describe(err) {
+    if (err instanceof MissingIdentityError) {
+      return "Authentication is not enabled for this site yet.";
+    }
+    if (err instanceof AuthError) {
+      if (mode === "login" && /confirm/i.test(err.message || "")) {
+        return "Please confirm your email before signing in.";
+      }
+      if (mode === "login" && (err.status === 400 || err.status === 401)) {
+        return "Invalid email or password.";
+      }
+      if (err.status === 403) return "Sign-ups are closed. Ask the site owner for an invite.";
+      if (err.status === 422) return err.message || "Check your email and password (min 6 characters).";
+      return err.message;
+    }
+    return err?.message || "Something went wrong.";
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setInfo("");
     setBusy(true);
     try {
       if (mode === "login") {
         await auth.loginEmail(email, password);
       } else {
-        await auth.registerEmail(email, password);
+        const { needsConfirmation } = await auth.registerEmail(email, password);
+        if (needsConfirmation) {
+          setInfo("Check your inbox and click the confirmation link, then sign in.");
+          setMode("login");
+          setPassword("");
+        }
       }
     } catch (err) {
-      setError(err.message.replace("Firebase: ", ""));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleAnon() {
-    setError("");
-    setBusy(true);
-    try {
-      await auth.loginAnon();
-    } catch (err) {
-      setError(err.message.replace("Firebase: ", ""));
+      setError(describe(err));
     } finally {
       setBusy(false);
     }
@@ -71,12 +85,19 @@ export default function AuthGate({ auth }) {
             <input
               type="password"
               required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-md border border-case-border bg-case-850 px-3 py-2 font-mono text-sm text-slate-200 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
               placeholder="••••••••"
             />
           </div>
+
+          {info && (
+            <p className="rounded border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 font-mono text-xs text-emerald-300">
+              {info}
+            </p>
+          )}
 
           {error && (
             <p className="rounded border border-rose-500/30 bg-rose-500/10 px-3 py-2 font-mono text-xs text-rose-300">
@@ -93,23 +114,12 @@ export default function AuthGate({ auth }) {
           </button>
         </form>
 
-        <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-case-border" />
-          <span className="font-mono text-[10px] text-slate-600">or</span>
-          <div className="h-px flex-1 bg-case-border" />
-        </div>
-
         <button
-          onClick={handleAnon}
-          disabled={busy}
-          className="w-full rounded-md border border-case-border px-3 py-2.5 font-mono text-sm text-slate-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-300 disabled:opacity-50"
-        >
-          continue as anonymous
-        </button>
-
-        <button
-          onClick={() => setMode(mode === "login" ? "register" : "login")}
-          className="mt-4 w-full text-center font-mono text-xs text-slate-500 hover:text-slate-300"
+          onClick={() => {
+            setError("");
+            setMode(mode === "login" ? "register" : "login");
+          }}
+          className="mt-5 w-full text-center font-mono text-xs text-slate-500 hover:text-slate-300"
         >
           {mode === "login" ? "need an account? register" : "have an account? sign in"}
         </button>

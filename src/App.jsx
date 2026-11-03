@@ -11,7 +11,7 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [activeWriteup, setActiveWriteup] = useState(null);
 
-  const { writeups, loading, saveWriteup } = useWriteups(auth.user?.uid);
+  const { writeups, loading, error, refresh, saveWriteup } = useWriteups(auth.user?.id);
 
   if (auth.loading) {
     return (
@@ -28,7 +28,7 @@ export default function App() {
   }
 
   async function handleSave(data) {
-    await saveWriteup(auth.user.uid, data);
+    await saveWriteup(data);
     setView("dashboard");
   }
 
@@ -48,6 +48,8 @@ export default function App() {
         <Dashboard
           writeups={writeups}
           loading={loading}
+          error={error}
+          onRetry={refresh}
           onNew={() => setView("editor")}
           onOpen={setActiveWriteup}
         />
